@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SOMOS · Mandala</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0010;user-select:none;}
+#app{display:flex;flex-direction:column;width:100%;height:100%;}
+
+/* HUD */
+#hud{
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:4px 8px;background:rgba(20,0,40,0.95);
+  border-bottom:2px solid #6600cc;
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#cc88ff;
+}
+#hud .title{font-size:11px;color:#ee99ff;font-weight:900;letter-spacing:3px;}
+
+/* CANVAS */
+#cw{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#120020 0%,#050008 100%);}
+#bgCanvas,#drawCanvas{position:absolute;touch-action:none;}
+
+/* BOTTOM TOOLBAR */
+#bot{
+  flex-shrink:0;background:rgba(15,0,30,0.97);
+  border-top:2px solid #6600cc;
+  display:flex;flex-direction:column;gap:0;
+}
+
+/* Row 1 — tools */
+#row1{
+  display:flex;align-items:center;gap:4px;padding:4px 6px;
+  border-bottom:1px solid rgba(102,0,204,0.3);
+  overflow-x:auto;
+}
+#row1::-webkit-scrollbar{height:0;}
+
+.tbtn{
+  flex-shrink:0;width:36px;height:36px;border-radius:8px;cursor:pointer;
+  font-size:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:2px solid;box-shadow:0 2px 0;transition:all 0.07s;gap:0;
+  font-family:'Cinzel',serif;
+}
+.tbtn .lbl{font-size:5.5px;letter-spacing:0.3px;line-height:1;margin-top:1px;}
+.tbtn:active{transform:translateY(1px);box-shadow:none!important;}
+.tbtn.a{background:rgba(255,180,0,0.25);border-color:#ffaa00;box-shadow:0 2px 0 #aa6600;color:#ffdd88;}
+.tbtn.b{background:rgba(100,0,200,0.3);border-color:#9933ff;box-shadow:0 2px 0 #4400aa;color:#cc88ff;}
+.tbtn.b.active{background:rgba(255,180,0,0.3);border-color:#ffaa00;box-shadow:0 2px 0 #aa6600;color:#ffee88;}
+
+.sep{width:2px;height:32px;background:rgba(102,0,204,0.4);flex-shrink:0;border-radius:1px;margin:0 2px;}
+
+/* Symmetry selector */
+#symRow{display:flex;gap:3px;align-items:center;}
+.sym-btn{
+  flex-shrink:0;width:28px;height:28px;border-radius:6px;cursor:pointer;
+  font-size:9px;font-weight:900;font-family:'Cinzel',serif;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid #6600aa;background:rgba(80,0,160,0.4);color:#cc88ff;
+  box-shadow:0 2px 0 #330066;
+}
+.sym-btn.active{background:rgba(200,100,255,0.35);border-color:#dd66ff;color:#fff;box-shadow:0 0 8px rgba(200,100,255,0.5);}
+.sym-btn:active{transform:translateY(1px);}
+
+/* Row 2 — palette + size */
+#row2{display:flex;align-items:center;gap:4px;padding:4px 6px;overflow-x:auto;}
+#row2::-webkit-scrollbar{height:0;}
+
+/* Palette */
+#pal{display:flex;gap:3px;flex-shrink:0;}
+.sw{
+  width:24px;height:24px;border-radius:50%;cursor:pointer;flex-shrink:0;
+  border:2px solid rgba(255,255,255,0.15);
+  transition:transform 0.07s;box-shadow:0 0 6px rgba(0,0,0,0.5);
+}
+.sw:hover{transform:scale(1.3);}
+.sw.sel{border-color:#ffdd00;transform:scale(1.2);box-shadow:0 0 8px #ffdd00;}
+
+/* Size dots */
+#sizes{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+.szd{
+  border-radius:50%;cursor:pointer;flex-shrink:0;
+  border:2px solid #6600aa;
+  background:radial-gradient(circle at 35% 35%,#dd99ff,#6600cc);
+  box-shadow:0 0 6px rgba(150,0,255,0.4);
+  transition:all 0.07s;
+}
+.szd.sel{border-color:#ffdd00;box-shadow:0 0 10px #ffdd00;}
+.szd:nth-child(1){width:16px;height:16px;}
+.szd:nth-child(2){width:22px;height:22px;}
+.szd:nth-child(3){width:30px;height:30px;}
+.szd:nth-child(4){width:38px;height:38px;}
+
+/* Current color */
+#curC{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;cursor:pointer;
+  border:3px solid #ffdd00;box-shadow:0 0 10px rgba(255,220,0,0.4);
+}
+
+/* Glow toggle */
+#glowWrap{display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;}
+#glowWrap label{font-size:7px;color:#cc88ff;font-family:'Cinzel',serif;letter-spacing:0.5px;}
+.toggle{width:32px;height:16px;background:#2a004a;border:2px solid #6600aa;border-radius:8px;cursor:pointer;position:relative;transition:background 0.2s;}
+.toggle.on{background:#9933ff;border-color:#dd66ff;}
+.toggle::after{content:'';position:absolute;top:1px;left:1px;width:10px;height:10px;border-radius:50%;background:#fff;transition:transform 0.2s;}
+.toggle.on::after{transform:translateX(16px);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="title">✦ MANDALA ✦</div>
+    <div id="symLabel" style="color:#ee99ff">SIMETRÍA: <span id="symVal">8</span></div>
+    <div style="display:flex;gap:6px;">
+      <button class="tbtn a" id="undoBtn" style="width:32px;height:28px;font-size:11px;">↩</button>
+      <button class="tbtn a" id="clearBtn" style="width:32px;height:28px;font-size:10px;">🗑️</button>
+      <button class="tbtn a" id="saveBtn" style="width:32px;height:28px;font-size:10px;">💾</button>
+    </div>
+  </div>
+
+  <div id="cw">
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="drawCanvas"></canvas>
+  </div>
+
+  <div id="bot">
+    <div id="row1">
+      <!-- Draw tools -->
+      <button class="tbtn b active" data-tool="draw">✏️<span class="lbl">DIBUJAR</span></button>
+      <button class="tbtn b" data-tool="erase">◌<span class="lbl">BORRAR</span></button>
+      <button class="tbtn b" data-tool="dot">●<span class="lbl">PUNTOS</span></button>
+      <button class="tbtn b" data-tool="petal">🌸<span class="lbl">PÉTALOS</span></button>
+      <button class="tbtn b" data-tool="geo">⬡<span class="lbl">GEO</span></button>
+      <div class="sep"></div>
+      <!-- Symmetry -->
+      <div id="symRow">
+        <div class="sym-btn" data-sym="4">4</div>
+        <div class="sym-btn active" data-sym="8">8</div>
+        <div class="sym-btn" data-sym="12">12</div>
+        <div class="sym-btn" data-sym="16">16</div>
+        <div class="sym-btn" data-sym="24">24</div>
+      </div>
+      <div class="sep"></div>
+      <!-- Mirror toggle -->
+      <button class="tbtn b active" id="mirrorBtn">↔<span class="lbl">ESPEJO</span></button>
+      <!-- Glow toggle -->
+      <div id="glowWrap">
+        <div class="toggle on" id="glowToggle"></div>
+        <label>GLOW</label>
+      </div>
+    </div>
+
+    <div id="row2">
+      <div id="pal"></div>
+      <div class="sep"></div>
+      <div id="curC"></div>
+      <div class="sep"></div>
+      <div id="sizes">
+        <div class="szd sel" data-sz="2"></div>
+        <div class="szd" data-sz="5"></div>
+        <div class="szd" data-sz="10"></div>
+        <div class="szd" data-sz="18"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const bgC  = document.getElementById('bgCanvas');
+const drC  = document.getElementById('drawCanvas');
+const bgX  = bgC.getContext('2d');
+const drX  = drC.getContext('2d');
+const cw   = document.getElementById('cw');
+
+let W, H, CX, CY, R;
+
+function resize() {
+  const saved = W && H ? drX.getImageData(0,0,W,H) : null;
+  W = cw.clientWidth; H = cw.clientHeight;
+  bgC.width = drC.width = W;
+  bgC.height = drC.height = H;
+  CX = W/2; CY = H/2;
+  R  = Math.min(W,H)*0.46;
+  drawBg();
+  if (saved) drX.putImageData(saved,0,0);
+}
+window.addEventListener('load',  ()=>setTimeout(resize,80));
+window.addEventListener('resize',()=>resize());
+
+// ── BG ─────────────────────────────────────────────────────
+function drawBg() {
+  bgX.clearRect(0,0,W,H);
+  // Dark radial bg
+  const bg = bgX.createRadialGradient(CX,CY,0,CX,CY,R*1.1);
+  bg.addColorStop(0,'#1a0030'); bg.addColorStop(0.7,'#0d0020'); bg.addColorStop(1,'#050008');
+  bgX.fillStyle=bg; bgX.fillRect(0,0,W,H);
+  // Guide circles
+  bgX.strokeStyle='rgba(100,0,200,0.18)'; bgX.lineWidth=1;
+  [0.25,0.5,0.75,1].forEach(r=>{
+    bgX.beginPath(); bgX.arc(CX,CY,R*r,0,Math.PI*2); bgX.stroke();
+  });
+  // Guide lines (matching symmetry)
+  bgX.strokeStyle='rgba(100,0,200,0.12)';
+  for(let i=0;i<symmetry;i++){
+    const a=i*Math.PI*2/symmetry;
+    bgX.beginPath(); bgX.moveTo(CX,CY); bgX.lineTo(CX+Math.cos(a)*R,CY+Math.sin(a)*R); bgX.stroke();
+  }
+  // Outer glow ring
+  const og = bgX.createRadialGradient(CX,CY,R*0.92,CX,CY,R*1.1);
+  og.addColorStop(0,'rgba(100,0,200,0.12)'); og.addColorStop(1,'rgba(0,0,0,0)');
+  bgX.fillStyle=og; bgX.beginPath(); bgX.arc(CX,CY,R*1.1,0,Math.PI*2); bgX.fill();
+}
+
+// ── STATE ─────────────────────────────────────────────────
+let tool='draw', symmetry=8, mirror=true, glow=true;
+let color='#ee44ff', brushSize=2;
+let drawing=false, lastX=null, lastY=null;
+let undoStack=[];
+
+// ── PALETTE ───────────────────────────────────────────────
+const PALETTE=[
+  '#ff2266','#ff6600','#ffdd00','#44ff88','#00ccff',
+  '#8844ff','#ee44ff','#ffffff','#ffaabb','#ff88ee',
+  '#00ffcc','#44aaff','#ffcc44','#ff4488','#aaffdd',
+];
+const palEl=document.getElementById('pal');
+const curEl=document.getElementById('curC'); curEl.style.background=color;
+const ci=document.createElement('input'); ci.type='color'; ci.value=color;
+ci.style='position:absolute;opacity:0;width:0;height:0'; document.body.appendChild(ci);
+curEl.addEventListener('click',()=>ci.click());
+ci.addEventListener('input',e=>setColor(e.target.value));
+
+PALETTE.forEach(c=>{
+  const s=document.createElement('div'); s.className='sw'+(c===color?' sel':'');
+  s.style.background=c;
+  const pick=()=>setColor(c);
+  s.addEventListener('mousedown',pick);
+  s.addEventListener('touchstart',e=>{e.preventDefault();pick();},{passive:false});
+  palEl.appendChild(s);
+});
+function setColor(c){
+  color=c; curEl.style.background=c; ci.value=c.length===7?c:color;
+  document.querySelectorAll('.sw').forEach(s=>{
+    s.classList.toggle('sel',s.style.background===c||hexToRgb(c)===s.style.backgroundColor);
+  });
+}
+function hexToRgb(h){const n=parseInt(h.replace('#',''),16);return`rgb(${(n>>16)&255}, ${(n>>8)&255}, ${n&255})`;}
+
+// ── SIZE ─────────────────────────────────────────────────
+document.querySelectorAll('.szd').forEach(b=>{
+  const go=()=>{brushSize=parseInt(b.dataset.sz);document.querySelectorAll('.szd').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};
+  b.addEventListener('click',go);
+  b.addEventListener('touchstart',e=>{e.preventDefault();go();},{passive:false});
+});
+
+// ── TOOLS ────────────────────────────────────────────────
+document.querySelectorAll('.tbtn[data-tool]').forEach(b=>{
+  const go=()=>{tool=b.dataset.tool;document.querySelectorAll('.tbtn[data-tool]').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
+  b.addEventListener('click',go);
+  b.addEventListener('touchstart',e=>{e.preventDefault();go();},{passive:false});
+});
+
+// Symmetry
+document.querySelectorAll('.sym-btn').forEach(b=>{
+  const go=()=>{
+    symmetry=parseInt(b.dataset.sym);
+    document.querySelectorAll('.sym-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('symVal').textContent=symmetry;
+    drawBg();
+  };
+  b.addEventListener('click',go);
+  b.addEventListener('touchstart',e=>{e.preventDefault();go();},{passive:false});
+});
+
+// Mirror
+const mirrorBtn=document.getElementById('mirrorBtn');
+mirrorBtn.addEventListener('click',()=>{ mirror=!mirror; mirrorBtn.classList.toggle('active',mirror); });
+
+// Glow
+const glowToggle=document.getElementById('glowToggle');
+glowToggle.addEventListener('click',()=>{ glow=!glow; glowToggle.classList.toggle('on',glow); });
+
+// ── UNDO / CLEAR / SAVE ──────────────────────────────────
+function saveUndo(){ undoStack.push(drC.toDataURL()); if(undoStack.length>25)undoStack.shift(); }
+document.getElementById('undoBtn').addEventListener('click',()=>{
+  if(!undoStack.length)return;
+  const img=new Image(); img.src=undoStack.pop();
+  img.onload=()=>{ drX.clearRect(0,0,W,H); drX.drawImage(img,0,0); };
+});
+document.getElementById('clearBtn').addEventListener('click',()=>{ saveUndo(); drX.clearRect(0,0,W,H); });
+document.getElementById('saveBtn').addEventListener('click',()=>{
+  // Composite bg + drawing
+  const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H;
+  const tx=tmp.getContext('2d');
+  tx.fillStyle='#050008'; tx.fillRect(0,0,W,H);
+  tx.drawImage(bgC,0,0); tx.drawImage(drC,0,0);
+  const a=document.createElement('a'); a.href=tmp.toDataURL('image/png'); a.download='mandala-somos.png'; a.click();
+});
+
+// ── DRAWING ──────────────────────────────────────────────
+function gp(e){
+  const r=drC.getBoundingClientRect(),s=e.touches?e.touches[0]:e;
+  return{x:(s.clientX-r.left)*(W/r.width),y:(s.clientY-r.top)*(H/r.height)};
+}
+drC.addEventListener('mousedown',  e=>{saveUndo();startD(gp(e));});
+drC.addEventListener('mousemove',  e=>{if(drawing)moveD(gp(e));});
+drC.addEventListener('mouseup',    ()=>endD());
+drC.addEventListener('mouseleave', ()=>endD());
+drC.addEventListener('touchstart', e=>{e.preventDefault();saveUndo();startD(gp(e));},{passive:false});
+drC.addEventListener('touchmove',  e=>{e.preventDefault();if(drawing)moveD(gp(e));},{passive:false});
+drC.addEventListener('touchend',   e=>{e.preventDefault();endD();},{passive:false});
+
+function startD(p){ drawing=true; lastX=p.x; lastY=p.y; if(tool==='dot'||tool==='petal'||tool==='geo'){stamp(p.x,p.y);} }
+function moveD(p){
+  if(tool==='draw'||tool==='erase') stroke(lastX,lastY,p.x,p.y);
+  else if(tool==='dot') stamp(p.x,p.y);
+  lastX=p.x; lastY=p.y;
+}
+function endD(){ drawing=false; lastX=lastY=null; }
+
+// ── APPLY IN ALL SYMMETRY SEGMENTS ────────────────────────
+function withSymmetry(fn) {
+  drX.save();
+  drX.translate(CX,CY);
+  for(let i=0;i<symmetry;i++){
+    const angle = i*Math.PI*2/symmetry;
+    drX.save();
+    drX.rotate(angle);
+    fn(false);
+    if(mirror){
+      drX.save(); drX.scale(1,-1);
+      fn(true);
+      drX.restore();
+    }
+    drX.restore();
+  }
+  drX.restore();
+}
+
+function stroke(x0,y0,x1,y1){
+  // Convert to local coords relative to center
+  const lx0=x0-CX, ly0=y0-CY;
+  const lx1=x1-CX, ly1=y1-CY;
+
+  drX.lineCap='round'; drX.lineJoin='round';
+  if(tool==='erase'){
+    drX.globalCompositeOperation='destination-out';
+    withSymmetry(()=>{
+      drX.lineWidth=brushSize*4;
+      drX.strokeStyle='rgba(0,0,0,1)';
+      drX.beginPath(); drX.moveTo(lx0,ly0); drX.lineTo(lx1,ly1); drX.stroke();
+    });
+    drX.globalCompositeOperation='source-over';
+    return;
+  }
+
+  if(glow){ drX.shadowColor=color; drX.shadowBlur=brushSize*3+4; }
+  drX.strokeStyle=color; drX.lineWidth=brushSize;
+
+  withSymmetry(()=>{
+    drX.beginPath(); drX.moveTo(lx0,ly0); drX.lineTo(lx1,ly1); drX.stroke();
+  });
+  drX.shadowBlur=0;
+}
+
+function stamp(x,y){
+  const lx=x-CX, ly=y-CY;
+  if(glow){ drX.shadowColor=color; drX.shadowBlur=brushSize*4+6; }
+
+  if(tool==='dot'){
+    drX.fillStyle=color;
+    withSymmetry(()=>{
+      drX.beginPath(); drX.arc(lx,ly,brushSize*1.5,0,Math.PI*2); drX.fill();
+    });
+  } else if(tool==='petal'){
+    withSymmetry(isMirror=>{
+      const r=brushSize*4;
+      drX.fillStyle=color; drX.globalAlpha=0.75;
+      drX.beginPath();
+      drX.ellipse(lx,ly,r*0.35,r,0,0,Math.PI*2);
+      drX.fill(); drX.globalAlpha=1;
+      // Petal shine
+      drX.fillStyle='rgba(255,255,255,0.3)';
+      drX.beginPath();
+      drX.ellipse(lx-r*0.08,ly-r*0.25,r*0.1,r*0.25,0,0,Math.PI*2);
+      drX.fill();
+    });
+  } else if(tool==='geo'){
+    withSymmetry(()=>{
+      const r=brushSize*3.5;
+      drX.strokeStyle=color; drX.lineWidth=brushSize*0.6; drX.fillStyle='transparent';
+      // Hexagon
+      drX.beginPath();
+      for(let i=0;i<6;i++){
+        const a=i*Math.PI/3;
+        i===0?drX.moveTo(lx+Math.cos(a)*r,ly+Math.sin(a)*r):drX.lineTo(lx+Math.cos(a)*r,ly+Math.sin(a)*r);
+      }
+      drX.closePath(); drX.stroke();
+      // Inner dot
+      drX.fillStyle=color; drX.globalAlpha=0.5;
+      drX.beginPath(); drX.arc(lx,ly,r*0.2,0,Math.PI*2); drX.fill();
+      drX.globalAlpha=1;
+    });
+  }
+  drX.shadowBlur=0;
+}
+
+// ── AUTO-SPIN IDLE ANIMATION ──────────────────────────────
+// Subtle rotating guide lines in bg when idle
+let idleAngle=0;
+let lastInteract=Date.now();
+function animFrame(){
+  if(Date.now()-lastInteract>3000){
+    idleAngle+=0.003;
+    bgX.clearRect(0,0,W,H);
+    // Redraw bg
+    const bg=bgX.createRadialGradient(CX,CY,0,CX,CY,R*1.1);
+    bg.addColorStop(0,'#1a0030');bg.addColorStop(0.7,'#0d0020');bg.addColorStop(1,'#050008');
+    bgX.fillStyle=bg;bgX.fillRect(0,0,W,H);
+    [0.25,0.5,0.75,1].forEach(r=>{
+      bgX.strokeStyle='rgba(100,0,200,0.18)';bgX.lineWidth=1;
+      bgX.beginPath();bgX.arc(CX,CY,R*r,0,Math.PI*2);bgX.stroke();
+    });
+    // Rotating guide lines
+    for(let i=0;i<symmetry;i++){
+      const a=i*Math.PI*2/symmetry+idleAngle;
+      const pulse=0.08+0.06*Math.sin(Date.now()*0.002+i);
+      bgX.strokeStyle=`rgba(120,0,255,${pulse})`;
+      bgX.lineWidth=1;
+      bgX.beginPath();bgX.moveTo(CX,CY);bgX.lineTo(CX+Math.cos(a)*R,CY+Math.sin(a)*R);bgX.stroke();
+    }
+    // Outer glow
+    const og=bgX.createRadialGradient(CX,CY,R*0.92,CX,CY,R*1.1);
+    og.addColorStop(0,'rgba(100,0,200,0.12)');og.addColorStop(1,'rgba(0,0,0,0)');
+    bgX.fillStyle=og;bgX.beginPath();bgX.arc(CX,CY,R*1.1,0,Math.PI*2);bgX.fill();
+  }
+  requestAnimationFrame(animFrame);
+}
+drC.addEventListener('touchstart',()=>lastInteract=Date.now());
+drC.addEventListener('mousedown', ()=>lastInteract=Date.now());
+requestAnimationFrame(animFrame);
+</script>
+</body>
+</html>
